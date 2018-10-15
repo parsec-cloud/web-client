@@ -4,11 +4,11 @@ import * as Msg from './msg.js';
 import * as Util from './util.js';
 
 // Class modules
-import {State} from './api.js';
 import {AudioPlayer} from './audio.js';
 import {Input} from './input.js';
 import {RTC} from './rtc.js';
 import {Signal} from './signal.js';
+import {State} from './api.js';
 import {VideoPlayer} from './video.js';
 
 function cfgDefaults(cfg) {
@@ -63,7 +63,7 @@ export class Client {
 				control.send(buf);
 		});
 
-    this.state = new State();
+		this.state = new State();
 
 		this.listeners.push(Util.addListener(window, 'beforeunload', () => {
 			this.destroy(0);
@@ -155,7 +155,7 @@ export class Client {
 			for (let i = 0; i < 3; i++)
 				this.conns[i].start(theirCreds[i]);
 
-      this.state.start(this.signal.getAttemptId());
+			this.state.start(this.signal.getAttemptId());
 
 		} catch (error) {
 			this.destroy(error.code);
@@ -169,7 +169,7 @@ export class Client {
 		this.videoPlayer.destroy();
 		this.audioPlayer.destroy();
 		this.input.detach();
-    this.state.close(code);
+		this.state.close(code);
 
 		if (this.connected)
 			this.conns[0].send(Msg.abort(code));
