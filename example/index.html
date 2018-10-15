@@ -139,6 +139,7 @@
 				addTextCol(tr, server.name);
 				addTextCol(tr, server.build);
 				addTextCol(tr, server.server_id);
+        addTextCol(tr, server.status);
 				addButtonCol(tr, 'Connect', async () => {
 					const container = document.querySelector('.video-container');
 					const element = document.querySelector('video');
