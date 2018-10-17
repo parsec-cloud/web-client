@@ -15,35 +15,8 @@
 	<table id='server-list'></table>
 
 	<script type='module'>
+		import * as API from './api.js';
 		import {Client} from './client.js';
-
-
-		/*** API ***/
-		async function auth(email, password) {
-			const res = await fetch('https://parsecgaming.com/v1/auth', {
-				method: 'post',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					email,
-					password,
-				}),
-			});
-
-			return await res.json();
-		}
-
-		async function serverList(sessionId) {
-			const res = await fetch('https://parsecgaming.com/v1/server-list?include_managed=true', {
-				method: 'get',
-				headers: {
-					'X-Parsec-Session-Id': sessionId,
-				},
-			});
-
-			return await res.json();
-		}
 
 
 		/*** CLIENT ***/
@@ -131,7 +104,7 @@
 
 		/*** MAIN ***/
 		async function serverTable(sessionId) {
-			const json = await serverList(sessionId);
+			const json = await API.serverList(sessionId);
 			const table = document.querySelector('#server-list');
 
 			for (const server of json) {
@@ -139,6 +112,7 @@
 				addTextCol(tr, server.name);
 				addTextCol(tr, server.build);
 				addTextCol(tr, server.server_id);
+				addTextCol(tr, server.status);
 				addButtonCol(tr, 'Connect', async () => {
 					const container = document.querySelector('.video-container');
 					const element = document.querySelector('video');
@@ -171,7 +145,7 @@
 				const email = document.querySelector('#email').value;
 				const password = document.querySelector('#password').value;
 
-				const json = await auth(email, password);
+				const json = await API.auth(email, password);
 				sessionStorage.sessionId = json.session_id;
 				window.location.reload();
 			}

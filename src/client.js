@@ -1,4 +1,5 @@
 // Util modules
+import * as API from './api.js';
 import * as Enum from './enum.js';
 import * as Msg from './msg.js';
 import * as Util from './util.js';
@@ -45,6 +46,7 @@ export class Client {
 		this.connected = false;
 		this.conns = [];
 		this.listeners = [];
+		this.logInterval = null;
 
 		this.videoPlayer = new VideoPlayer(element, () => {
 			const control = this.conns[0];
@@ -111,6 +113,14 @@ export class Client {
 			this.signal.close(1000);
 			this.connected = true;
 
+			//XXX required to prevent Parsec managed cloud machines from shutting down
+			this.logInterval = setInterval(() => {
+				API.connectionUpdate({
+					attempt_id: this.signal.getAttemptId(),
+					state_str: 'LSC_EVENTLOOP',
+				});
+			}, 60000);
+
 			this.listeners.push(Util.addListener(document, 'visibilitychange', () => {
 				if (document.hidden) {
 					this.videoPlayer.destroy();
@@ -165,8 +175,16 @@ export class Client {
 		this.audioPlayer.destroy();
 		this.input.detach();
 
-		if (this.connected)
+		if (this.connected) {
+			clearInterval(this.logInterval);
 			this.conns[0].send(Msg.abort(code));
+		}
+
+		API.connectionUpdate({
+			state_str: 'LSC_EXIT',
+			attempt_id: this.signal.getAttemptId(),
+			exit_code: code,
+		});
 
 		for (const conn of this.conns)
 			conn.close();
