@@ -1,8 +1,8 @@
 // Util modules
+import * as API from './api.js';
 import * as Enum from './enum.js';
 import * as Msg from './msg.js';
 import * as Util from './util.js';
-import * as API from './api.js';
 
 // Class modules
 import {AudioPlayer} from './audio.js';
