@@ -2,13 +2,13 @@
 import * as Enum from './enum.js';
 import * as Msg from './msg.js';
 import * as Util from './util.js';
+import * as API from './api.js';
 
 // Class modules
 import {AudioPlayer} from './audio.js';
 import {Input} from './input.js';
 import {RTC} from './rtc.js';
 import {Signal} from './signal.js';
-import {State} from './api.js';
 import {VideoPlayer} from './video.js';
 
 function cfgDefaults(cfg) {
@@ -46,6 +46,7 @@ export class Client {
 		this.connected = false;
 		this.conns = [];
 		this.listeners = [];
+		this.logInterval = null;
 
 		this.videoPlayer = new VideoPlayer(element, () => {
 			const control = this.conns[0];
@@ -62,8 +63,6 @@ export class Client {
 			if (control && this.connected)
 				control.send(buf);
 		});
-
-		this.state = new State();
 
 		this.listeners.push(Util.addListener(window, 'beforeunload', () => {
 			this.destroy(0);
@@ -114,6 +113,14 @@ export class Client {
 			this.signal.close(1000);
 			this.connected = true;
 
+			//XXX required to prevent Parsec managed cloud machines from shutting down
+			this.logInterval = setInterval(() => {
+				API.connectionUpdate({
+					attempt_id: this.signal.getAttemptId(),
+					state_str: 'LSC_EVENTLOOP',
+				});
+			}, 60000);
+
 			this.listeners.push(Util.addListener(document, 'visibilitychange', () => {
 				if (document.hidden) {
 					this.videoPlayer.destroy();
@@ -155,8 +162,6 @@ export class Client {
 			for (let i = 0; i < 3; i++)
 				this.conns[i].start(theirCreds[i]);
 
-			this.state.start(this.signal.getAttemptId());
-
 		} catch (error) {
 			this.destroy(error.code);
 		}
@@ -169,10 +174,17 @@ export class Client {
 		this.videoPlayer.destroy();
 		this.audioPlayer.destroy();
 		this.input.detach();
-		this.state.close(code);
 
-		if (this.connected)
+		if (this.connected) {
+			clearInterval(this.logInterval);
 			this.conns[0].send(Msg.abort(code));
+		}
+
+		API.connectionUpdate({
+			state_str: 'LSC_EXIT',
+			attempt_id: this.signal.getAttemptId(),
+			exit_code: code,
+		});
 
 		for (const conn of this.conns)
 			conn.close();

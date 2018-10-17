@@ -1,68 +1,42 @@
-export class State {
-	constructor(host, debug) {
-		this.intervalId = null;
-		this.attemptId = null;
-		this.host = host || 'parsecgaming.com';
-		this.debug = debug || false;
-	}
+const HOST = 'parsecgaming.com';
 
-	_log(...args) {
-		if (this.debug) {
-			console.log(...args);
-		}
-	}
+export async function connectionUpdate(msg) {
+	const res = await fetch(`https://${HOST}/v1/state/`, {
+		method: 'put',
+		headers: {
+			'Content-Type': 'application/json; charset=utf-8',
+		},
+		body: JSON.stringify({
+			...msg,
+			platform: 'web',
+		}),
+	});
 
-	_updateConnection(code) {
-		const isExit = code !== null,
-			stateStr = isExit ? 'LSC_EXIT' : 'LSC_EVENTLOOP',
-			attemptId = this.attemptId,
-			data = {
-				attempt_id: attemptId,
-				state_str: stateStr,
-				platform: 'browser'};
-		if (isExit) {
-			data.exit_code = code;
-		}
-		if (!attemptId) {
-			this._log('no attempt id set');
-			return;
-		}
+	return await res.json();
+}
 
-		this._log(`${isExit ? 'exit' : 'updating'} connection`);
+export async function auth(email, password) {
+	const res = await fetch(`https://${HOST}/v1/auth`, {
+		method: 'post',
+		headers: {
+			'Content-Type': 'application/json; charset=utf-8',
+		},
+		body: JSON.stringify({
+			email,
+			password,
+		}),
+	});
 
-		fetch(`https://${this.host}/v1/state/`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json; charset=utf-8',
-			},
-			body: JSON.stringify(data)}).
-			then((resp) => resp.json()).
-			catch((err) => {
-				this._log('error when heartbeating connection', err);
-			});
-	}
+	return await res.json();
+}
 
-	_clear() {
-		if (this.intervalId) {
-			this._log('clearing existing interval');
-			clearInterval(this.intervalId);
-		}
-		this.intervalId = null;
-	}
+export async function serverList(sessionId) {
+	const res = await fetch(`https://${HOST}/v1/server-list?include_managed=true`, {
+		method: 'get',
+		headers: {
+			'X-Parsec-Session-Id': sessionId,
+		},
+	});
 
-	start(attemptId) {
-		const INTERVAL = 60 * 1000;
-		this._log('starting connection update');
-		this._clear();
-		this.attemptId = attemptId;
-		this.intervalId = setInterval(() => {
-			this._updateConnection(null);
-		}, INTERVAL);
-	}
-
-	close(code) {
-		this._log('closing connection update with', code);
-		this._updateConnection(code);
-		this._clear();
-	}
+	return await res.json();
 }
