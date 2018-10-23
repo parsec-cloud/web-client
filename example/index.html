@@ -144,10 +144,15 @@
 			async function submit() {
 				const email = document.querySelector('#email').value;
 				const password = document.querySelector('#password').value;
+				const mfa = document.querySelector('#mfa').value;
 
-				const json = await API.auth(email, password);
-				sessionStorage.sessionId = json.session_id;
-				window.location.reload();
+				try {
+					const json = await API.auth(email, password, mfa);
+					sessionStorage.sessionId = json.session_id;
+					window.location.reload();
+				} catch (error) {
+					window.alert(error);
+				}
 			}
 
 			const table = document.querySelector('#server-list');
@@ -159,6 +164,14 @@
 			tr = addRow(table);
 			addTextCol(tr, 'Password');
 			addInputCol(tr, 'password', 'password', submit);
+
+			tr = addRow(table);
+			addTextCol(tr, 'MFA (optional)');
+			addInputCol(tr, 'mfa', 'text', submit);
+
+			tr = addRow(table);
+			addTextCol(tr, '');
+			addButtonCol(tr,  'Log In', submit);
 
 			document.querySelector('#email').focus();
 		}
