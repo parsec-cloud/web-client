@@ -11,6 +11,7 @@ export const Msg = {
 	Button     : 4,
 	Axis       : 5,
 	Unplug     : 6,
+	Clipboard  : 7,
 	Config     : 8,
 	Cursor     : 9,
 	Abort      : 10,

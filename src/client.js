@@ -97,6 +97,12 @@ export class Client {
 			case Enum.Msg.Chat:
 				this.onEvent({type: 'chat', msg});
 				break;
+
+			case Enum.Msg.Clipboard:
+				try {
+					navigator.clipboard.writeText(Msg.unpack(buf).str);
+				} catch (e) {}
+				break;
 		}
 	}
 
