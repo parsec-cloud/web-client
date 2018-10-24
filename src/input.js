@@ -58,8 +58,8 @@ export class Input {
 			y = event.movementY;
 
 		} else {
-			x = clientToServerX(event.clientX, this.m);
-			y = clientToServerY(event.clientY, this.m);
+			x = clientToServerX(event.offsetX, this.m);
+			y = clientToServerY(event.offsetY, this.m);
 		}
 
 		this.send(Msg.motion(data0, x, y));
