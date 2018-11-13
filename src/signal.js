@@ -22,14 +22,12 @@ export class Signal {
 		this.ws = null;
 	}
 
-	connect(host, port, sessionId, serverId, creds, onCandidate, onError) {
+	connect(host, port, sessionId, serverId, creds, onCandidate) {
 		this.ws = new WebSocket(`wss://${host}:${port}/?session=${sessionId}`);
 
 		this.ws.onclose = (event) => {
-			if (event.code !== 1000) {
+			if (event.code !== 1000)
 				this.onFatal(event.code);
-				onError({type: 'close', code: event.code});
-			}
 		};
 
 		this.ws.onopen = () => {
@@ -49,10 +47,8 @@ export class Signal {
 
 			switch (msg.action) {
 				case 'connection_init_response':
-					if (!msg.approved) {
+					if (!msg.approved)
 						this.onFatal(Enum.Warning.Reject);
-						onError(msg);
-					}
 
 					this.theirCreds = msg.creds;
 					break;
