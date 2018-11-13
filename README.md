@@ -34,7 +34,7 @@ cd web-client
 npm start
 ```
 
-The development server will be running on port 443, and should be accessed via `https://devlocal.info`.
+The development server will be running on port 443, and should be accessed via `https://devlocal.info`. The web client must run on a secure origin or it will fail the origin check on the Parsec signal server.
 
 ## Contributing
 
