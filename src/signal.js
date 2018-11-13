@@ -18,50 +18,50 @@ export class Signal {
 	constructor(onFatal) {
 		this.onFatal = onFatal;
 		this.attemptId = createAttemptId();
+		this.theirCreds = null;
 		this.ws = null;
 	}
 
-	connect(host, port, sessionId, serverId, creds, onCandidate) {
-		return new Promise((resolve, reject) => {
-			this.ws = new WebSocket(`wss://${host}:${port}/connection/${this.attemptId}?session=${sessionId}`);
+	connect(host, port, sessionId, serverId, creds, onCandidate, onError) {
+		this.ws = new WebSocket(`wss://${host}:${port}/?session=${sessionId}`);
 
-			this.ws.onclose = (event) => {
-				if (event.code !== 1000) {
-					this.onFatal(event.code);
-					reject({type: 'close', code: event.code});
-				}
-			};
+		this.ws.onclose = (event) => {
+			if (event.code !== 1000) {
+				this.onFatal(event.code);
+				onError({type: 'close', code: event.code});
+			}
+		};
 
-			this.ws.onopen = () => {
-				this.ws.send(JSON.stringify({
-					action: 'connection_init',
-					server_id: serverId,
-					timeout_ms: 30000,
-					mode: 2,
-					creds,
-				}));
-			};
+		this.ws.onopen = () => {
+			this.ws.send(JSON.stringify({
+				action: 'connection_init',
+				subject: 'server',
+				to: serverId,
+				attempt_id: this.attemptId,
+				timeout_ms: 30000,
+				mode: 2,
+				creds,
+			}));
+		};
 
-			this.ws.onmessage = (event) => {
-				const msg = JSON.parse(event.data);
+		this.ws.onmessage = (event) => {
+			const msg = JSON.parse(event.data);
 
-				switch (msg.action) {
-					case 'connection_init_response':
-						if (!msg.approved) {
-							this.onFatal(Enum.Warning.Reject);
-							reject(msg);
-						}
+			switch (msg.action) {
+				case 'connection_init_response':
+					if (!msg.approved) {
+						this.onFatal(Enum.Warning.Reject);
+						onError(msg);
+					}
 
-						resolve(msg.creds);
+					this.theirCreds = msg.creds;
+					break;
 
-						break;
-
-					case 'candidate_exchange':
-						onCandidate(msg);
-						break;
-				}
-			};
-		});
+				case 'candidate_exchange':
+					onCandidate(msg, this.theirCreds[msg.slot]);
+					break;
+			}
+		};
 	}
 
 	getAttemptId() {

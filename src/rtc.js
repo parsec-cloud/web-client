@@ -58,19 +58,23 @@ function credsToSDPStr(creds, mid) {
 function candidateToCandidateStr(candidate, theirCreds) {
 	const foundation = 2395300328;
 	const priority = 2113937151;
+	const type = candidate.from_stun ? 'srflx' : 'host';
 
 	return `candidate:${foundation} 1 udp ${priority} ${candidate.candidate_ip} ` +
-		`${candidate.candidate_port} typ host generation 0 ufrag ${theirCreds.ice_ufrag} network-cost 50`;
+		`${candidate.candidate_port} typ ${type} generation 0 ufrag ${theirCreds.ice_ufrag} network-cost 50`;
 }
 
 export class RTC {
 	constructor(serverId, attemptId, slot, onOpen, onMessage, onCandidate) {
-		this.firstSend = 1;
+		this.onCandidate = onCandidate;
+		this.attemptId = attemptId;
+		this.serverId = serverId;
+		this.synced = [];
+		this.started = false;
 		this.sdp = null;
 		this.rtc = null;
 		this.channel = null;
 		this.offer = null;
-		this.theirCreds = null;
 
 		this.rtc = new RTCPeerConnection({
 			iceServers: [
@@ -86,20 +90,18 @@ export class RTC {
 				const carray = event.candidate.candidate.replace('candidate:', '').split(' ');
 
 				if (carray[2].toLowerCase() === 'udp') {
-					onCandidate({
+					this.onCandidate({
 						action: 'candidate_exchange',
-						to: serverId,
-						from: attemptId,
+						subject: 'server',
+						to: this.serverId,
+						attempt_id: this.attemptId,
 						slot,
 						candidate_ip: carray[4],
 						candidate_port: parseInt(carray[5]),
 						sync: 0,
-						from_stun: 0,
-						lan: 0,
-						first: this.firstSend,
+						from_stun: carray[7] === 'srflx' ? 1 : 0,
+						lan: carray[7] === 'host' ? 1 : 0,
 					});
-
-					this.firstSend = 0;
 				}
 			}
 		};
@@ -131,22 +133,42 @@ export class RTC {
 		this.channel.send(buf);
 	}
 
-	async start(theirCreds) {
-		//this will begin STUN
-		this.theirCreds = theirCreds;
-		await this.rtc.setLocalDescription(this.offer);
+	async setCandidate(candidate, theirCreds) {
+		if (!this.started) {
+			//this will begin STUN
+			await this.rtc.setLocalDescription(this.offer);
 
-		const sdpStr = credsToSDPStr(this.theirCreds, this.sdp.a.mid);
-		await this.rtc.setRemoteDescription({type: 'answer', sdp: sdpStr});
-	}
+			const sdpStr = credsToSDPStr(theirCreds, this.sdp.a.mid);
+			await this.rtc.setRemoteDescription({type: 'answer', sdp: sdpStr});
 
-	async setCandidate(candidate) {
-		const candidateStr = candidateToCandidateStr(candidate, this.theirCreds);
+			this.started = true;
+		}
 
-		await this.rtc.addIceCandidate({
-			candidate: candidateStr,
-			sdpMid: this.sdp.a.mid,
-			sdpMLineIndex: 0,
-		});
+		if (!candidate.sync) {
+			await this.rtc.addIceCandidate({
+				candidate: candidateToCandidateStr(candidate, theirCreds),
+				sdpMid: this.sdp.a.mid,
+				sdpMLineIndex: 0,
+			});
+
+			if (candidate.from_stun && !this.synced[candidate.slot]) {
+				setTimeout(() => {
+					this.onCandidate({
+						action: 'candidate_exchange',
+						subject: 'server',
+						to: this.serverId,
+						attempt_id: this.attemptId,
+						slot: candidate.slot,
+						candidate_ip: '1.2.3.4',
+						candidate_port: 1234,
+						sync: 1,
+						from_stun: 0,
+						lan: 0,
+					});
+				}, 100);
+
+				this.synced[candidate.slot] = true;
+			}
+		}
 	}
 }
