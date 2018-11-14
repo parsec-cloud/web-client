@@ -154,17 +154,9 @@ export class Client {
 		for (let i = 0; i < 3; i++)
 			myCreds.push(await this.conns[i].createOffer());
 
-		try {
-			const theirCreds = await this.signal.connect(cfg.app_ss_endpoint, cfg.app_ss_port, sessionId, serverId, myCreds, (candidate) => {
-				this.conns[candidate.slot].setCandidate(candidate);
-			});
-
-			for (let i = 0; i < 3; i++)
-				this.conns[i].start(theirCreds[i]);
-
-		} catch (error) {
-			this.destroy(error.code);
-		}
+		this.signal.connect(cfg.app_ss_endpoint, cfg.app_ss_port, sessionId, serverId, myCreds, (candidate, theirCreds) => {
+			this.conns[candidate.slot].setCandidate(candidate, theirCreds);
+		});
 	}
 
 	destroy(code) {
