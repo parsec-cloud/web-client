@@ -65,15 +65,15 @@ function candidateToCandidateStr(candidate, theirCreds) {
 }
 
 export class RTC {
-	constructor(serverId, attemptId, slot, onOpen, onMessage, onCandidate) {
+	constructor(serverId, attemptId, onCandidate) {
 		this.onCandidate = onCandidate;
 		this.attemptId = attemptId;
 		this.serverId = serverId;
-		this.synced = [];
+		this.synced = false;
 		this.started = false;
 		this.sdp = null;
 		this.rtc = null;
-		this.channel = null;
+		this.channels = {};
 		this.offer = null;
 
 		this.rtc = new RTCPeerConnection({
@@ -92,7 +92,6 @@ export class RTC {
 						subject: 'server',
 						to: this.serverId,
 						attempt_id: this.attemptId,
-						slot,
 						candidate_ip: carray[4],
 						candidate_port: parseInt(carray[5]),
 						sync: 0,
@@ -103,15 +102,20 @@ export class RTC {
 			}
 		};
 
-		this.channel = this.rtc.createDataChannel('channel');
-		this.channel.binaryType = 'arraybuffer';
-		this.channel.onopen = onOpen;
-		this.channel.onmessage = onMessage;
 	}
 
 	close() {
-		this.channel.close();
+		for (const kv of Object.entries(this.channels))
+			kv[1].close();
+
 		this.rtc.close();
+	}
+
+	addChannel(name, id, onOpen, onMessage) {
+		this.channels[id] = this.rtc.createDataChannel(name, {id});
+		this.channels[id].binaryType = 'arraybuffer';
+		this.channels[id].onopen = onOpen;
+		this.channels[id].onmessage = onMessage;
 	}
 
 	async createOffer() {
@@ -126,8 +130,8 @@ export class RTC {
 		};
 	}
 
-	send(buf) {
-		this.channel.send(buf);
+	send(buf, id) {
+		this.channels[id].send(buf);
 	}
 
 	async setCandidate(candidate, theirCreds) {
@@ -148,14 +152,13 @@ export class RTC {
 				sdpMLineIndex: 0,
 			});
 
-			if (candidate.from_stun && !this.synced[candidate.slot]) {
+			if (candidate.from_stun && !this.synced) {
 				setTimeout(() => {
 					this.onCandidate({
 						action: 'candidate_exchange',
 						subject: 'server',
 						to: this.serverId,
 						attempt_id: this.attemptId,
-						slot: candidate.slot,
 						candidate_ip: '1.2.3.4',
 						candidate_port: 1234,
 						sync: 1,
@@ -164,7 +167,7 @@ export class RTC {
 					});
 				}, 100);
 
-				this.synced[candidate.slot] = true;
+				this.synced = true;
 			}
 		}
 	}

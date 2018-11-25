@@ -54,7 +54,7 @@ export class Signal {
 					break;
 
 				case 'candidate_exchange':
-					onCandidate(msg, this.theirCreds[msg.slot]);
+					onCandidate(msg, this.theirCreds);
 					break;
 			}
 		};
