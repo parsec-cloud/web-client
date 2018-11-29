@@ -101,11 +101,10 @@ export class Client {
 		cfg = cfgDefaults(cfg);
 
 		const onRTCCandidate = (candidate) => {
-			this.signal.send(JSON.stringify(candidate));
+			this.signal.send(sessionId, candidate);
 		};
 
 		const onControlOpen = () => {
-			this.signal.close(1000);
 			this.connected = true;
 
 			//XXX required to prevent Parsec managed cloud machines from shutting down

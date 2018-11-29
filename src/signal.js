@@ -20,10 +20,11 @@ export class Signal {
 		this.attemptId = createAttemptId();
 		this.theirCreds = null;
 		this.ws = null;
+		this.interval = null;
 	}
 
 	connect(host, port, sessionId, serverId, creds, onCandidate) {
-		this.ws = new WebSocket(`wss://${host}:${port}/?session=${sessionId}`);
+		this.ws = new WebSocket(`wss://${host}:${port}`);
 
 		this.ws.onclose = (event) => {
 			if (event.code !== 1000)
@@ -31,7 +32,7 @@ export class Signal {
 		};
 
 		this.ws.onopen = () => {
-			this.ws.send(JSON.stringify({
+			this.send(sessionId, {
 				action: 'connection_init',
 				subject: 'server',
 				to: serverId,
@@ -39,7 +40,11 @@ export class Signal {
 				timeout_ms: 30000,
 				mode: 2,
 				creds,
-			}));
+			});
+
+			this.interval = setInterval(() => {
+				this.ws.send('PING');
+			}, 30000);
 		};
 
 		this.ws.onmessage = (event) => {
@@ -56,6 +61,10 @@ export class Signal {
 				case 'candidate_exchange':
 					onCandidate(msg, this.theirCreds);
 					break;
+
+				case 'error':
+					this.onFatal(msg.code);
+					break;
 			}
 		};
 	}
@@ -64,8 +73,9 @@ export class Signal {
 		return this.attemptId;
 	}
 
-	send(str) {
-		this.ws.send(str);
+	send(token, json) {
+		json.token = token;
+		this.ws.send(JSON.stringify(json));
 	}
 
 	close(code) {
@@ -73,5 +83,8 @@ export class Signal {
 			this.ws.close(code);
 			this.ws = null;
 		}
+
+		clearInterval(this.interval);
+		this.interval = null;
 	}
 }
