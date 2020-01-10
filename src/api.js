@@ -15,7 +15,7 @@ export async function connectionUpdate(msg) {
 	return await res.json();
 }
 
-export async function auth(email, password) {
+export async function auth(email, password, tfa) {
 	const res = await fetch(`https://${HOST}/v1/auth`, {
 		method: 'post',
 		headers: {
@@ -24,10 +24,16 @@ export async function auth(email, password) {
 		body: JSON.stringify({
 			email,
 			password,
+			tfa
 		}),
 	});
 
-	return await res.json();
+	const json = await res.json();
+
+	if (!res.ok)
+		throw new Error(json.error);
+
+	return await json;
 }
 
 export async function serverList(sessionId) {

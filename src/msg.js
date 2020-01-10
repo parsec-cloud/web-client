@@ -97,6 +97,9 @@ export function config(cfg) {
 	return strMsg(Enum.Msg.Config, serializeConfig(cfg));
 }
 
+export function clipboard(text) {
+	return strMsg(Enum.Msg.Clipboard, text);
+}
 
 /*** UNPACKING ***/
 
@@ -144,6 +147,7 @@ export function unpack(buf) {
 
 		case Enum.Msg.Status:
 		case Enum.Msg.Chat:
+		case Enum.Msg.Clipboard:
 			return {...msg, str: unpackString(buf, CONTROL_SIZE, msg.data0 - 1)};
 	}
 

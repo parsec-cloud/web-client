@@ -90,10 +90,17 @@ export class Input {
 		this.send(Msg.mouse(button, down ? 1 : 0));
 	}
 
-	_key(event) {
+	async _key(event) {
 		event.preventDefault();
 
-		//disable problematic browser shortcuts
+		if (event.code === 'KeyV' && event.ctrlKey) {
+			try {
+				const text = await navigator.clipboard.readText();
+				this.send(Msg.clipboard(text));
+			} catch (e) {}
+		}
+
+		// disable problematic browser shortcuts
 		if (event.code === 'F5' && event.ctrlKey ||
 			event.code === 'KeyI' && event.ctrlKey && event.shiftKey ||
 			event.code === 'F11') return;
